@@ -229,9 +229,11 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
     bool passing = true;
     EstimatorBucket passBucket;
     EstimatorBucket failBucket;
+    std::string status;
 
     // Start counting from highest feerate transactions
     for (int bucket = maxbucketindex; bucket >= 0; --bucket) {
+        LogPrintf("BucketData::bucket=%d\n", bucket);
         if (newBucketRange) {
             curNearBucket = bucket;
             newBucketRange = false;
@@ -240,6 +242,7 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
         nConf += confAvg[periodTarget - 1][bucket];
         totalNum += txCtAvg[bucket];
         failNum += failAvg[periodTarget - 1][bucket];
+        LogPrintf("BucketData::bucket=%d\n", bucket);
         for (unsigned int confct = confTarget; confct < GetMaxConfirms(); confct++)
             extraNum += unconfTxs[(nBlockHeight - confct) % bins][bucket];
         extraNum += oldUnconfTxs[bucket];
@@ -249,9 +252,10 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
         // will be looking at the same amount of data and same bucket breaks)
         if (totalNum >= sufficientTxVal / (1 - decay)) {
             double curPct = nConf / (totalNum + failNum + extraNum);
-
+            status = "passed";
             // Check to see if we are no longer getting confirmed at the success rate
             if (curPct < successBreakPoint) {
+                status = "failed";
                 if (passing == true) {
                     // First time we hit a failure record the failed bucket
                     unsigned int failMinBucket = std::min(curNearBucket, curFarBucket);
@@ -284,6 +288,20 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
                 bestFarBucket = curFarBucket;
                 newBucketRange = true;
             }
+        }
+        if (verbose) {
+            LogPrintf("BucketData::failNum=%d\n", failNum);
+            LogPrintf("BucketData::inMempool=%d\n", extraNum);
+            LogPrintf("BucketData::totalNum=%d\n", totalNum);
+            LogPrintf("BucketData::totalConfirmed=%d\n", totalNum);
+            LogPrintf("BucketData::successBreakPoint=%d\n", successBreakPoint);
+            LogPrintf("BucketData::confTarget=%d\n", confTarget);
+            LogPrintf("BucketData::decay=%d\n", decay);
+            LogPrintf("BucketData::sufficientTxVal=%d\n", sufficientTxVal);
+            LogPrintf("BucketData::status=%d\n", status);
+            LogPrintf("BucketData::withinTarget=%d\n", nConf);
+            LogPrintf("BucketData::bucketStart=%d\n", 0);
+            LogPrintf("BucketData::bucketEnd=%d\n", 0);
         }
     }
 
