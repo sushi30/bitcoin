@@ -325,9 +325,9 @@ public:
             entry, ancestors, limit_ancestor_count, limit_ancestor_size,
             limit_descendant_count, limit_descendant_size, unused_error_string);
     }
-    CFeeRate estimateSmartFee(int num_blocks, bool conservative, FeeCalculation* calc) override
+    CFeeRate estimateSmartFee(int num_blocks, bool conservative, FeeCalculation* calc, bool verbose) override
     {
-        return ::feeEstimator.estimateSmartFee(num_blocks, calc, conservative);
+        return ::feeEstimator.estimateSmartFee(num_blocks, calc, conservative, verbose);
     }
     unsigned int estimateMaxBlocks() override
     {

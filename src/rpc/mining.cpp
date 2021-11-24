@@ -1074,11 +1074,16 @@ static RPCHelpMan estimatesmartfee()
         }
         if (fee_mode == FeeEstimateMode::ECONOMICAL) conservative = false;
     }
+    bool verbose = false;
+    if (!request.params[2].isNull()) {
+        verbose = true;
+    }
+
 
     UniValue result(UniValue::VOBJ);
     UniValue errors(UniValue::VARR);
     FeeCalculation feeCalc;
-    CFeeRate feeRate = ::feeEstimator.estimateSmartFee(conf_target, &feeCalc, conservative);
+    CFeeRate feeRate = ::feeEstimator.estimateSmartFee(conf_target, &feeCalc, conservative, verbose);
     if (feeRate != CFeeRate(0)) {
         result.pushKV("feerate", ValueFromAmount(feeRate.GetFeePerK()));
     } else {
@@ -1227,7 +1232,7 @@ static const CRPCCommand commands[] =
     { "generating",         "generatetodescriptor",   &generatetodescriptor,   {"num_blocks","descriptor","maxtries"} },
     { "generating",         "generateblock",          &generateblock,          {"output","transactions"} },
 
-    { "util",               "estimatesmartfee",       &estimatesmartfee,       {"conf_target", "estimate_mode"} },
+    { "util",               "estimatesmartfee",       &estimatesmartfee,       {"conf_target", "estimate_mode", "verbose"} },
 
     { "hidden",             "estimaterawfee",         &estimaterawfee,         {"conf_target", "threshold"} },
     { "hidden",             "generate",               &generate,               {} },

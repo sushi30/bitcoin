@@ -205,10 +205,10 @@ public:
         }
     }
     bool getNetworkActive() override { return m_context->connman && m_context->connman->GetNetworkActive(); }
-    CFeeRate estimateSmartFee(int num_blocks, bool conservative, int* returned_target = nullptr) override
+    CFeeRate estimateSmartFee(int num_blocks, bool conservative, int* returned_target = nullptr, bool verbose = false) override
     {
         FeeCalculation fee_calc;
-        CFeeRate result = ::feeEstimator.estimateSmartFee(num_blocks, &fee_calc, conservative);
+        CFeeRate result = ::feeEstimator.estimateSmartFee(num_blocks, &fee_calc, conservative, verbose);
         if (returned_target) {
             *returned_target = fee_calc.returnedTarget;
         }

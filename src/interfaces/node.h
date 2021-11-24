@@ -152,7 +152,7 @@ public:
     virtual bool getNetworkActive() = 0;
 
     //! Estimate smart fee.
-    virtual CFeeRate estimateSmartFee(int num_blocks, bool conservative, int* returned_target = nullptr) = 0;
+    virtual CFeeRate estimateSmartFee(int num_blocks, bool conservative, int* returned_target = nullptr, bool verbose = false) = 0;
 
     //! Get dust relay fee.
     virtual CFeeRate getDustRelayFee() = 0;
