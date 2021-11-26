@@ -1042,7 +1042,7 @@ static RPCHelpMan estimatesmartfee()
             "       \"UNSET\"\n"
             "       \"ECONOMICAL\"\n"
             "       \"CONSERVATIVE\""},
-                    {"verbose", RPCArg::Type::BOOL, /* default */ "null", "bucket information"},
+                    {"verbose", RPCArg::Type::BOOL, /* default */ "false", "bucket information"},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
@@ -1077,7 +1077,7 @@ static RPCHelpMan estimatesmartfee()
     }
     bool verbose = false;
     if (!request.params[2].isNull()) {
-        verbose = true;
+        verbose = request.params[2].isNum() ? (request.params[2].get_int() != 0) : request.params[2].get_bool();
     }
 
 
