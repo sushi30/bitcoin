@@ -1042,6 +1042,7 @@ static RPCHelpMan estimatesmartfee()
             "       \"UNSET\"\n"
             "       \"ECONOMICAL\"\n"
             "       \"CONSERVATIVE\""},
+                    {"verbose", RPCArg::Type::BOOL, /* default */ "null", "bucket information"},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
