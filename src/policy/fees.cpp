@@ -252,7 +252,6 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
         if (verbose) {
             LogPrintf("BucketData::failNum=%d\n", failNum);
             LogPrintf("BucketData::inMempool=%d\n", extraNum);
-            LogPrintf("BucketData::totalNum=%d\n", totalNum);
             LogPrintf("BucketData::totalConfirmed=%d\n", totalNum);
             LogPrintf("BucketData::successBreakPoint=%d\n", successBreakPoint);
             LogPrintf("BucketData::confTarget=%d\n", confTarget);
