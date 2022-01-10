@@ -180,6 +180,9 @@ void TxConfirmStats::Record(int blocksToConfirm, double feerate)
     int periodsToConfirm = (blocksToConfirm + scale - 1) / scale;
     unsigned int bucketindex = bucketMap.lower_bound(feerate)->second;
     for (size_t i = periodsToConfirm; i <= confAvg.size(); i++) {
+        if (i - 1 < 10) {
+            // LogPrintf("TxConfirmStats::Record add tx to bucket: %d (%d confirmations)\n", bucketindex, i - 1);
+        }
         confAvg[i - 1][bucketindex]++;
     }
     txCtAvg[bucketindex]++;
@@ -252,7 +255,8 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
         if (verbose) {
             LogPrintf("BucketData::failNum=%d\n", failNum);
             LogPrintf("BucketData::inMempool=%d\n", extraNum);
-            LogPrintf("BucketData::totalConfirmed=%d\n", totalNum);
+            LogPrintf("BucketData::totalNum=%d\n", totalNum);
+            LogPrintf("BucketData::totalConfirmed=%d\n", nConf);
             LogPrintf("BucketData::successBreakPoint=%d\n", successBreakPoint);
             LogPrintf("BucketData::confTarget=%d\n", confTarget);
             LogPrintf("BucketData::decay=%d\n", decay);
@@ -285,7 +289,7 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
             // Otherwise update the cumulative stats, and the bucket variables
             // and reset the counters
             else {
-                    if (verbose) LogPrintf("BucketData::status=%d\n", status);                                
+                if (verbose) LogPrintf("BucketData::status=%d\n", status);                                
                 failBucket = EstimatorBucket(); // Reset any failed bucket, currently passing
                 foundAnswer = true;
                 passing = true;
@@ -447,6 +451,9 @@ unsigned int TxConfirmStats::NewTx(unsigned int nBlockHeight, double val)
 
 void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHeight, unsigned int bucketindex, bool inBlock)
 {
+    LogPrint(BCLog::ESTIMATEFEE,
+    "TxConfirmStats::removeTx(entryHeight=%d, nBestSeenHeight=%d, bucketindex=%d ,inBlock=%d)\n",
+    entryHeight, nBestSeenHeight, bucketindex, inBlock);
     //nBestSeenHeight is not updated yet for the new block
     int blocksAgo = nBestSeenHeight - entryHeight;
     if (nBestSeenHeight == 0)  // the BlockPolicyEstimator hasn't seen any blocks yet
@@ -489,15 +496,19 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
 // of no harm to try to remove them again.
 bool CBlockPolicyEstimator::removeTx(uint256 hash, bool inBlock)
 {
+    
     LOCK(m_cs_fee_estimator);
+    LogPrint(BCLog::ESTIMATEFEE, "CBlockPolicyEstimator::removeTx(%s, %d)\n", hash.ToString(), inBlock);
     std::map<uint256, TxStatsInfo>::iterator pos = mapMemPoolTxs.find(hash);
     if (pos != mapMemPoolTxs.end()) {
         feeStats->removeTx(pos->second.blockHeight, nBestSeenHeight, pos->second.bucketIndex, inBlock);
         shortStats->removeTx(pos->second.blockHeight, nBestSeenHeight, pos->second.bucketIndex, inBlock);
         longStats->removeTx(pos->second.blockHeight, nBestSeenHeight, pos->second.bucketIndex, inBlock);
         mapMemPoolTxs.erase(hash);
+        LogPrint(BCLog::ESTIMATEFEE, "CBlockPolicyEstimator::removeTx->true\n");
         return true;
     } else {
+        LogPrint(BCLog::ESTIMATEFEE, "CBlockPolicyEstimator::removeTx->false\n");
         return false;
     }
 }
@@ -534,6 +545,7 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo
                  hash.ToString());
         return;
     }
+    LogPrint(BCLog::ESTIMATEFEE, "CBlockPolicyEstimator::processTransaction:%s\n",hash.ToString());
 
     if (txHeight != nBestSeenHeight) {
         // Ignore side chains and re-orgs; assuming they are random they don't
@@ -561,14 +573,19 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo
     assert(bucketIndex == bucketIndex2);
     unsigned int bucketIndex3 = longStats->NewTx(txHeight, (double)feeRate.GetFeePerK());
     assert(bucketIndex == bucketIndex3);
+    LogPrint(BCLog::ESTIMATEFEE, "CBlockPolicyEstimator::processTransaction:bucketIndex=%d\n",bucketIndex);
 }
 
 bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxMemPoolEntry* entry)
 {
     if (!removeTx(entry->GetTx().GetHash(), true)) {
         // This transaction wasn't being tracked for fee estimation
+        LogPrint(BCLog::ESTIMATEFEE, "skippedTx:txid:%s\n",entry->GetTx().GetHash().GetHex());
         return false;
+    } else {
+        LogPrint(BCLog::ESTIMATEFEE, "txNotRemoved:txid:%s\n",entry->GetTx().GetHash().GetHex());
     }
+    
 
     // How many blocks did it take for miners to include this transaction?
     // blocksToConfirm is 1-based, so a transaction included in the earliest
@@ -583,7 +600,7 @@ bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxM
 
     // Feerates are stored and reported as BTC-per-kb:
     CFeeRate feeRate(entry->GetFee(), entry->GetTxSize());
-
+    LogPrint(BCLog::ESTIMATEFEE, "processBlockTx:txid:%s\n",entry->GetTx().GetHash().GetHex());
     feeStats->Record(blocksToConfirm, (double)feeRate.GetFeePerK());
     shortStats->Record(blocksToConfirm, (double)feeRate.GetFeePerK());
     longStats->Record(blocksToConfirm, (double)feeRate.GetFeePerK());
