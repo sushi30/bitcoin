@@ -1085,6 +1085,7 @@ static RPCHelpMan estimatesmartfee()
             "                   target, but is not as responsive to short term drops in the\n"
             "                   prevailing fee market. Must be one of (case insensitive):\n"
              "\"" + FeeModes("\"\n\"") + "\""},
+            {"verbose", RPCArg::Type::BOOL,  RPCArg::Default{"false"}, "bucket information"},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
@@ -1123,11 +1124,15 @@ static RPCHelpMan estimatesmartfee()
         }
         if (fee_mode == FeeEstimateMode::ECONOMICAL) conservative = false;
     }
+    bool verbose = false;
+    if (!request.params[2].isNull()) {
+        verbose = request.params[2].isNum() ? (request.params[2].get_int() != 0) : request.params[2].get_bool();
+    }
 
     UniValue result(UniValue::VOBJ);
     UniValue errors(UniValue::VARR);
     FeeCalculation feeCalc;
-    CFeeRate feeRate{fee_estimator.estimateSmartFee(conf_target, &feeCalc, conservative)};
+    CFeeRate feeRate{fee_estimator.estimateSmartFee(conf_target, &feeCalc, conservative, verbose)};
     if (feeRate != CFeeRate(0)) {
         CFeeRate min_mempool_feerate{mempool.GetMinFee(gArgs.GetIntArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000)};
         CFeeRate min_relay_feerate{::minRelayTxFee};
