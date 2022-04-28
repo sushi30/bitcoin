@@ -387,10 +387,10 @@ public:
 class CRegTestParams : public CChainParams {
 public:
     explicit CRegTestParams(const ArgsManager& args) {
-        strNetworkID =  CBaseChainParams::REGTEST;
+        strNetworkID =  CBaseChainParams::TESTNET;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 150;
+        consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP16Exception = uint256();
         consensus.BIP34Height = 1; // Always active unless overridden
         consensus.BIP34Hash = uint256();
