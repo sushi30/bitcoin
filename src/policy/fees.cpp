@@ -139,7 +139,8 @@ public:
      */
     double EstimateMedianVal(int confTarget, double sufficientTxVal,
                              double minSuccess, unsigned int nBlockHeight,
-                             EstimationResult *result = nullptr, bool verbose = false) const;
+                             bool verbose,
+                             EstimationResult *result = nullptr ) const;
 
     /** Return the max number of confirms we're tracking */
     unsigned int GetMaxConfirms() const { return scale * confAvg.size(); }
@@ -223,7 +224,7 @@ void TxConfirmStats::UpdateMovingAverages()
 // returns -1 on error conditions
 double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
                                          double successBreakPoint, unsigned int nBlockHeight,
-                                         EstimationResult *result, bool verbose
+                                         bool verbose, EstimationResult *result
                                          ) const
 {
     // Counters for a bucket (or range of buckets)
@@ -242,6 +243,7 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
     unsigned int curNearBucket = maxbucketindex;
     unsigned int bestNearBucket = maxbucketindex;
     unsigned int curFarBucket = maxbucketindex;
+
     unsigned int bestFarBucket = maxbucketindex;
     bool foundAnswer = false;
     unsigned int bins = unconfTxs.size();
@@ -309,6 +311,7 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
             // Otherwise update the cumulative stats, and the bucket variables
             // and reset the counters
             else {
+                if (verbose) LogPrintf("BucketData::status=%d\n", status);                                
                 failBucket = EstimatorBucket(); // Reset any failed bucket, currently passing
                 foundAnswer = true;
                 passing = true;
@@ -714,7 +717,7 @@ CFeeRate CBlockPolicyEstimator::estimateRawFee(int confTarget, double successThr
     if (successThreshold > 1)
         return CFeeRate(0);
 
-    double median = stats->EstimateMedianVal(confTarget, sufficientTxs, successThreshold, nBestSeenHeight, result, false);
+    double median = stats->EstimateMedianVal(confTarget, sufficientTxs, successThreshold, nBestSeenHeight, false, result);
 
     if (median < 0)
         return CFeeRate(0);
@@ -767,32 +770,32 @@ unsigned int CBlockPolicyEstimator::MaxUsableEstimate() const
  * time horizon which tracks confirmations up to the desired target.  If
  * checkShorterHorizon is requested, also allow short time horizon estimates
  * for a lower target to reduce the given answer */
-double CBlockPolicyEstimator::estimateCombinedFee(unsigned int confTarget, double successThreshold, bool checkShorterHorizon, EstimationResult *result, bool verbose) const
+double CBlockPolicyEstimator::estimateCombinedFee(unsigned int confTarget, double successThreshold, bool checkShorterHorizon, bool verbose, EstimationResult *result) const
 {
     double estimate = -1;
     if (confTarget >= 1 && confTarget <= longStats->GetMaxConfirms()) {
         // Find estimate from shortest time horizon possible
         if (confTarget <= shortStats->GetMaxConfirms()) { // short horizon
-            estimate = shortStats->EstimateMedianVal(confTarget, SUFFICIENT_TXS_SHORT, successThreshold, nBestSeenHeight, result, verbose);
+            estimate = shortStats->EstimateMedianVal(confTarget, SUFFICIENT_TXS_SHORT, successThreshold, nBestSeenHeight, verbose, result);
         }
         else if (confTarget <= feeStats->GetMaxConfirms()) { // medium horizon
-            estimate = feeStats->EstimateMedianVal(confTarget, SUFFICIENT_FEETXS, successThreshold, nBestSeenHeight, result, verbose);
+            estimate = feeStats->EstimateMedianVal(confTarget, SUFFICIENT_FEETXS, successThreshold, nBestSeenHeight, verbose, result);
         }
         else { // long horizon
-            estimate = longStats->EstimateMedianVal(confTarget, SUFFICIENT_FEETXS, successThreshold, nBestSeenHeight, result, verbose);
+            estimate = longStats->EstimateMedianVal(confTarget, SUFFICIENT_FEETXS, successThreshold, nBestSeenHeight, verbose, result);
         }
         if (checkShorterHorizon) {
             EstimationResult tempResult;
             // If a lower confTarget from a more recent horizon returns a lower answer use it.
             if (confTarget > feeStats->GetMaxConfirms()) {
-                double medMax = feeStats->EstimateMedianVal(feeStats->GetMaxConfirms(), SUFFICIENT_FEETXS, successThreshold, nBestSeenHeight, &tempResult);
+                double medMax = feeStats->EstimateMedianVal(feeStats->GetMaxConfirms(), SUFFICIENT_FEETXS, successThreshold, nBestSeenHeight, verbose, &tempResult);
                 if (medMax > 0 && (estimate == -1 || medMax < estimate)) {
                     estimate = medMax;
                     if (result) *result = tempResult;
                 }
             }
             if (confTarget > shortStats->GetMaxConfirms()) {
-                double shortMax = shortStats->EstimateMedianVal(shortStats->GetMaxConfirms(), SUFFICIENT_TXS_SHORT, successThreshold, nBestSeenHeight, &tempResult);
+                double shortMax = shortStats->EstimateMedianVal(shortStats->GetMaxConfirms(), SUFFICIENT_TXS_SHORT, successThreshold, nBestSeenHeight, verbose, &tempResult);
                 if (shortMax > 0 && (estimate == -1 || shortMax < estimate)) {
                     estimate = shortMax;
                     if (result) *result = tempResult;
@@ -811,10 +814,10 @@ double CBlockPolicyEstimator::estimateConservativeFee(unsigned int doubleTarget,
     double estimate = -1;
     EstimationResult tempResult;
     if (doubleTarget <= shortStats->GetMaxConfirms()) {
-        estimate = feeStats->EstimateMedianVal(doubleTarget, SUFFICIENT_FEETXS, DOUBLE_SUCCESS_PCT, nBestSeenHeight, result);
+        estimate = feeStats->EstimateMedianVal(doubleTarget, SUFFICIENT_FEETXS, DOUBLE_SUCCESS_PCT, nBestSeenHeight, false, result);
     }
     if (doubleTarget <= feeStats->GetMaxConfirms()) {
-        double longEstimate = longStats->EstimateMedianVal(doubleTarget, SUFFICIENT_FEETXS, DOUBLE_SUCCESS_PCT, nBestSeenHeight, &tempResult);
+        double longEstimate = longStats->EstimateMedianVal(doubleTarget, SUFFICIENT_FEETXS, DOUBLE_SUCCESS_PCT, nBestSeenHeight, false, &tempResult);
         if (longEstimate > estimate) {
             estimate = longEstimate;
             if (result) *result = tempResult;
@@ -869,13 +872,13 @@ CFeeRate CBlockPolicyEstimator::estimateSmartFee(int confTarget, FeeCalculation 
      * the purpose of conservative estimates is not to let short term
      * fluctuations lower our estimates by too much.
      */
-    double halfEst = estimateCombinedFee(confTarget/2, HALF_SUCCESS_PCT, true, &tempResult, verbose);
+    double halfEst = estimateCombinedFee(confTarget/2, HALF_SUCCESS_PCT, true, verbose, &tempResult);
     if (feeCalc) {
         feeCalc->est = tempResult;
         feeCalc->reason = FeeReason::HALF_ESTIMATE;
     }
     median = halfEst;
-    double actualEst = estimateCombinedFee(confTarget, SUCCESS_PCT, true, &tempResult, verbose);
+    double actualEst = estimateCombinedFee(confTarget, SUCCESS_PCT, true, verbose, &tempResult);
     if (actualEst > median) {
         median = actualEst;
         if (feeCalc) {
@@ -883,7 +886,7 @@ CFeeRate CBlockPolicyEstimator::estimateSmartFee(int confTarget, FeeCalculation 
             feeCalc->reason = FeeReason::FULL_ESTIMATE;
         }
     }
-    double doubleEst = estimateCombinedFee(2 * confTarget, DOUBLE_SUCCESS_PCT, !conservative, &tempResult, verbose);
+    double doubleEst = estimateCombinedFee(2 * confTarget, DOUBLE_SUCCESS_PCT, !conservative, verbose, &tempResult);
     if (doubleEst > median) {
         median = doubleEst;
         if (feeCalc) {

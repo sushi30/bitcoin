@@ -270,7 +270,7 @@ private:
     bool processBlockTx(unsigned int nBlockHeight, const CTxMemPoolEntry* entry) EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);
 
     /** Helper for estimateSmartFee */
-    double estimateCombinedFee(unsigned int confTarget, double successThreshold, bool checkShorterHorizon, EstimationResult *result, bool verbose) const EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);
+    double estimateCombinedFee(unsigned int confTarget, double successThreshold, bool checkShorterHorizon, bool verbose, EstimationResult *result) const EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);
     /** Helper for estimateSmartFee */
     double estimateConservativeFee(unsigned int doubleTarget, EstimationResult *result) const EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);
     /** Number of blocks of data recorded while fee estimates have been running */

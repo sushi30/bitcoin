@@ -1085,7 +1085,7 @@ static RPCHelpMan estimatesmartfee()
             "                   target, but is not as responsive to short term drops in the\n"
             "                   prevailing fee market. Must be one of (case insensitive):\n"
              "\"" + FeeModes("\"\n\"") + "\""},
-            {"verbose", RPCArg::Type::BOOL,  RPCArg::Default{"false"}, "bucket information"},
+            {"verbose", RPCArg::Type::BOOL,  RPCArg::Default{false}, "bucket information"},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
@@ -1107,7 +1107,7 @@ static RPCHelpMan estimatesmartfee()
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {UniValue::VNUM, UniValue::VSTR});
+    RPCTypeCheck(request.params, {UniValue::VNUM, UniValue::VSTR, UniValue::VBOOL});
     RPCTypeCheckArgument(request.params[0], UniValue::VNUM);
 
     CBlockPolicyEstimator& fee_estimator = EnsureAnyFeeEstimator(request.context);
@@ -1124,11 +1124,8 @@ static RPCHelpMan estimatesmartfee()
         }
         if (fee_mode == FeeEstimateMode::ECONOMICAL) conservative = false;
     }
-    bool verbose = false;
-    if (!request.params[2].isNull()) {
-        verbose = request.params[2].isNum() ? (request.params[2].get_int() != 0) : request.params[2].get_bool();
-    }
-
+    const bool verbose{request.params[2].isNull() ? false : request.params[2].get_bool()};
+    printf("verbose: %d\n", verbose);
     UniValue result(UniValue::VOBJ);
     UniValue errors(UniValue::VARR);
     FeeCalculation feeCalc;

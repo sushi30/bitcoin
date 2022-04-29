@@ -159,6 +159,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getrawmempool", 0, "verbose" },
     { "getrawmempool", 1, "mempool_sequence" },
     { "estimatesmartfee", 0, "conf_target" },
+    { "estimatesmartfee", 2, "verbose" },
     { "estimaterawfee", 0, "conf_target" },
     { "estimaterawfee", 1, "threshold" },
     { "prioritisetransaction", 1, "dummy" },
